@@ -171,6 +171,17 @@ local function previewPed(citizenId)
     end
 end
 
+-- Registered entry to open UM multichar or fallback to built-in picker
+RegisterNetEvent('qbx_core:client:chooseCharacter', function()
+    if GetResourceState('um-multicharacter') == 'started' then
+        TriggerEvent('um-multicharacter:client:start')
+    elseif GetResourceState('um_multicharacter') == 'started' then
+        TriggerEvent('um_multicharacter:client:start')
+    else
+        chooseCharacter()
+    end
+end)
+
 ---@return CharacterRegistration?
 local function characterDialog()
     local nationalityOption = config.characters.limitNationalities and {
@@ -422,4 +433,3 @@ local function chooseCharacter()
                     local success = createCharacter(i)
                     if success then return end
 
-The content is truncated for display...
