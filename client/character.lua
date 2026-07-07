@@ -1,7 +1,11 @@
 local config = require 'config.client'
 local defaultSpawn = require 'config.shared'.defaultSpawn
 
-if config.characters.useExternalCharacters then return end
+print('[qbx_core-debug] client/character.lua loaded. useExternalCharacters =', tostring(config.characters.useExternalCharacters))
+if config.characters.useExternalCharacters then
+    print('[qbx_core-debug] config.characters.useExternalCharacters is true — qbx_core character flow will not run. Exiting.')
+    return
+end
 
 local previewCam
 local randomLocation = config.characters.locations[math.random(1, #config.characters.locations)]
@@ -173,11 +177,20 @@ end
 
 -- Registered entry to open UM multichar or fallback to built-in picker
 RegisterNetEvent('qbx_core:client:chooseCharacter', function()
+    print('[qbx_core-debug] qbx_core:client:chooseCharacter called; checking UM resources...')
+    print('[qbx_core-debug] Resource states:',
+          'um-multicharacter=' .. tostring(GetResourceState('um-multicharacter')),
+          'um_multicharacter=' .. tostring(GetResourceState('um_multicharacter')),
+          'um-spawn=' .. tostring(GetResourceState('um-spawn')))
+
     if GetResourceState('um-multicharacter') == 'started' then
+        print('[qbx_core-debug] Triggering um-multicharacter:client:start')
         TriggerEvent('um-multicharacter:client:start')
     elseif GetResourceState('um_multicharacter') == 'started' then
+        print('[qbx_core-debug] Triggering um_multicharacter:client:start')
         TriggerEvent('um_multicharacter:client:start')
     else
+        print('[qbx_core-debug] UM multicharacter not present; falling back to built-in chooseCharacter()')
         chooseCharacter()
     end
 end)
@@ -353,16 +366,20 @@ local function createCharacter(cid)
         cid = cid
     })
 
+    print('[qbx_core-debug] createCharacter: checking spawn resources before opening spawn UI - um-spawn=', tostring(GetResourceState('um-spawn')), ' qbx_spawn=', tostring(GetResourceState('qbx_spawn')))
     if GetResourceState('um-spawn') == 'started' then
-        -- um-spawn present: open its spawn UI after character creation
+        print('[qbx_core-debug] createCharacter: attempting to open um-spawn')
         TriggerEvent('um-spawn:client:startSpawnUI')
     else
         if GetResourceState('qbx_spawn') == 'missing' then
+            print('[qbx_core-debug] createCharacter: qbx_spawn missing -> spawnDefault')
             spawnDefault()
         else
             if config.characters.startingApartment then
+                print('[qbx_core-debug] createCharacter: opening apartments spawn UI')
                 TriggerEvent('apartments:client:setupSpawnUI', newData)
             else
+                print('[qbx_core-debug] createCharacter: falling back to qbx_core:client:spawnNoApartments')
                 TriggerEvent('qbx_core:client:spawnNoApartments')
             end
         end
@@ -390,7 +407,7 @@ local function chooseCharacter()
 
     FreezeEntityPosition(cache.ped, true)
     Wait(1000)
-    SetEntityCoords(cache.ped, randomLocation.pedCoords.x, randomLocation.pedCoords.y, randomLocation.pedCoords.z, false, false, false, false)
+    SetEntityCoors(cache.ped, randomLocation.pedCoords.x, randomLocation.pedCoords.y, randomLocation.pedCoords.z, false, false, false, false)
     SetEntityHeading(cache.ped, randomLocation.pedCoords.w)
 
     NetworkStartSoloTutorialSession()
