@@ -121,7 +121,7 @@ local function setupPreviewCam()
     SetTimecycleModifier('hud_def_blur')
     SetTimecycleModifierStrength(1.0)
     FreezeEntityPosition(cache.ped, false)
-    previewCam = CreateCamWithParams('DEFAULT_SCRIPTED_CAMERA', randomLocation.camCoords.x, randomLocation.camCoords.y, randomLocation.camCoords.z, -6.0, 0.0, randomLocation.camCoords.w, 40.0, false, 0)
+    previewCam = CreateCamWithParams('DEFAULT_SCRIPTED_CAMERA', randomLocation.camCoords.x, randomLocation.camCoords.y, randomLocation.camCoords.z, -6.0, 0.0, randomLocation.camCoords.w, 40.0, fa[...]
     SetCamActive(previewCam, true)
     SetCamUseShallowDofMode(previewCam, true)
     SetCamNearDof(previewCam, 0.4)
@@ -342,13 +342,18 @@ local function createCharacter(cid)
         cid = cid
     })
 
-    if GetResourceState('qbx_spawn') == 'missing' then
-        spawnDefault()
+    if GetResourceState('um-spawn') == 'started' then
+        -- um-spawn present: open its spawn UI after character creation
+        TriggerEvent('um-spawn:client:startSpawnUI')
     else
-        if config.characters.startingApartment then
-            TriggerEvent('apartments:client:setupSpawnUI', newData)
+        if GetResourceState('qbx_spawn') == 'missing' then
+            spawnDefault()
         else
-            TriggerEvent('qbx_core:client:spawnNoApartments')
+            if config.characters.startingApartment then
+                TriggerEvent('apartments:client:setupSpawnUI', newData)
+            else
+                TriggerEvent('qbx_core:client:spawnNoApartments')
+            end
         end
     end
 
@@ -417,112 +422,4 @@ local function chooseCharacter()
                     local success = createCharacter(i)
                     if success then return end
 
-                    previewPed(firstCharacterCitizenId)
-                    lib.showContext('qbx_core_multichar_characters')
-                end
-            end
-        }
-
-        if character then
-            lib.registerContext({
-                id = 'qbx_core_multichar_character_'..i,
-                title = ('%s %s - %s'):format(character.charinfo.firstname, character.charinfo.lastname, character.citizenid),
-                canClose = false,
-                menu = 'qbx_core_multichar_characters',
-                options = {
-                    {
-                        title = locale('info.play'),
-                        description = locale('info.play_description', name),
-                        icon = 'play',
-                        onSelect = function()
-                            DoScreenFadeOut(10)
-                            lib.callback.await('qbx_core:server:loadCharacter', false, character.citizenid)
-                            if GetResourceState('qbx_apartments'):find('start') then
-                                TriggerEvent('apartments:client:setupSpawnUI', character.citizenid)
-                            elseif GetResourceState('qbx_spawn'):find('start') then
-                                TriggerEvent('qb-spawn:client:setupSpawns', character.citizenid)
-                                TriggerEvent('qb-spawn:client:openUI', true)
-                            else
-                                spawnLastLocation()
-                            end
-                            destroyPreviewCam()
-                        end
-                    },
-                    config.characters.enableDeleteButton and {
-                        title = locale('info.delete_character'),
-                        description = locale('info.delete_character_description', name),
-                        icon = 'trash',
-                        onSelect = function()
-                            local alert = lib.alertDialog({
-                                header = locale('info.delete_character'),
-                                content = locale('info.confirm_delete'),
-                                centered = true,
-                                cancel = true
-                            })
-                            if alert == 'confirm' then
-                                local success = lib.callback.await('qbx_core:server:deleteCharacter', false, character.citizenid)
-                                Notify(success and locale('success.character_deleted') or locale('error.character_delete_failed'), success and 'success' or 'error')
-
-                                destroyPreviewCam()
-                                chooseCharacter()
-                            else
-                                lib.showContext('qbx_core_multichar_character_'..i)
-                            end
-                        end
-                    } or nil
-                }
-            })
-        end
-    end
-
-    lib.registerContext({
-        id = 'qbx_core_multichar_characters',
-        title = locale('info.multichar_title'),
-        canClose = false,
-        options = options
-    })
-
-    SetTimecycleModifier('default')
-    lib.showContext('qbx_core_multichar_characters')
-end
-
-RegisterNetEvent('qbx_core:client:spawnNoApartments', function() -- This event is only for no starting apartments
-    DoScreenFadeOut(500)
-    Wait(2000)
-    SetEntityCoords(cache.ped, defaultSpawn.x, defaultSpawn.y, defaultSpawn.z, false, false, false, false)
-    SetEntityHeading(cache.ped, defaultSpawn.w)
-    Wait(500)
-    destroyPreviewCam()
-    SetEntityVisible(cache.ped, true, false)
-    Wait(500)
-    DoScreenFadeIn(250)
-    TriggerServerEvent('QBCore:Server:OnPlayerLoaded')
-    TriggerEvent('QBCore:Client:OnPlayerLoaded')
-    TriggerServerEvent('qb-houses:server:SetInsideMeta', 0, false)
-    TriggerServerEvent('qb-apartments:server:SetInsideMeta', 0, 0, false)
-    TriggerEvent('qb-weathersync:client:EnableSync')
-    TriggerEvent('qb-clothes:client:CreateFirstCharacter')
-end)
-
-RegisterNetEvent('qbx_core:client:playerLoggedOut', function()
-    if GetInvokingResource() then return end -- Make sure this can only be triggered from the server
-    chooseCharacter()
-end)
-
-CreateThread(function()
-    while true do
-        Wait(0)
-        if NetworkIsSessionStarted() then
-            pcall(function() exports.spawnmanager:setAutoSpawn(false) end)
-            Wait(250)
-            chooseCharacter()
-            break
-        end
-    end
-    -- since people apparently die during char select. Since SetEntityInvincible is notoriously unreliable, we'll just loop it to be safe. shrug
-    while NetworkIsInTutorialSession() do
-        SetEntityInvincible(PlayerPedId(), true)
-        Wait(250)
-    end
-    SetEntityInvincible(PlayerPedId(), false)
-end)
+The content is truncated for display...
